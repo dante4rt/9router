@@ -199,21 +199,21 @@ describe("#5318 failures stay failures", () => {
     expect(await result.response.json()).toHaveProperty("error");
     expect(onRequestSuccess).not.toHaveBeenCalled();
   });
-  it("rejects an upstream JSON error envelope without reporting success", async () => {
+  it.each([undefined, false, true].flatMap(stream => ["mistral", "openai"].map(provider => [stream, provider])))("rejects a JSON error envelope for stream=%s provider=%s", async (stream, provider) => {
     const onRequestSuccess = vi.fn();
     fetchMock.mockResolvedValueOnce(Response.json({ error: { message: "Generation failed" } }));
-    const result = await route(request(true), "mistral", { onRequestSuccess });
+    const result = await route(request(stream), provider, { onRequestSuccess });
     expect(result.success).toBe(false);
-    expect(result.response.status).toBeGreaterThanOrEqual(400);
+    expect(result.response.status).toBe(502);
     expect(await result.response.json()).toHaveProperty("error");
     expect(onRequestSuccess).not.toHaveBeenCalled();
   });
-  it("does not report success when reading upstream JSON is aborted", async () => {
+  it.each([undefined, false, true].flatMap(stream => ["mistral", "openai"].map(provider => [stream, provider])))("preserves JSON read cancellation for stream=%s provider=%s", async (stream, provider) => {
     const onRequestSuccess = vi.fn();
     fetchMock.mockResolvedValueOnce(new Response(new ReadableStream({
       start(controller) { controller.error(new DOMException("Cancelled", "AbortError")); },
     }), { headers: { "Content-Type": "application/json" } }));
-    const result = await route(request(true), "mistral", { onRequestSuccess });
+    const result = await route(request(stream), provider, { onRequestSuccess });
     expect(result.success).toBe(false);
     expect(result.response.status).toBe(499);
     expect(await result.response.json()).toHaveProperty("error");
