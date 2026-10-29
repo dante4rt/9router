@@ -199,6 +199,15 @@ describe("#5318 failures stay failures", () => {
     expect(await result.response.json()).toHaveProperty("error");
     expect(onRequestSuccess).not.toHaveBeenCalled();
   });
+  it.each([undefined, false, true].flatMap(stream => [{}, { choices: [] }].map(value => [stream, value])))("rejects invalid forced-provider completions for stream=%s body=%j", async (stream, value) => {
+    const onRequestSuccess = vi.fn();
+    fetchMock.mockResolvedValueOnce(Response.json(value));
+    const result = await route(request(stream), "openai", { onRequestSuccess });
+    expect(result.success).toBe(false);
+    expect(result.response.status).toBe(502);
+    expect(await result.response.json()).toHaveProperty("error");
+    expect(onRequestSuccess).not.toHaveBeenCalled();
+  });
   it.each([undefined, false, true].flatMap(stream => ["mistral", "openai"].map(provider => [stream, provider])))("rejects a JSON error envelope for stream=%s provider=%s", async (stream, provider) => {
     const onRequestSuccess = vi.fn();
     fetchMock.mockResolvedValueOnce(Response.json({ error: { message: "Generation failed" } }));

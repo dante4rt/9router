@@ -283,6 +283,12 @@ export async function handleNonStreamingResponse({ providerResponse, provider, m
     return createErrorResult(status, responseBody.error.message || "Upstream JSON response failed");
   }
 
+  if (sourceFormat === FORMATS.OPENAI && targetFormat === FORMATS.OPENAI && (!Array.isArray(responseBody?.choices) || !responseBody.choices.length ||
+      !responseBody.choices.every(choice => choice?.message && typeof choice.message === "object"))) {
+    appendLog({ status: `FAILED ${HTTP_STATUS.BAD_GATEWAY}` });
+    return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Invalid Chat Completions response from upstream");
+  }
+
   reqLogger.logProviderResponse(providerResponse.status, providerResponse.statusText, providerResponse.headers, responseBody);
   if (onRequestSuccess) {
     Promise.resolve()
